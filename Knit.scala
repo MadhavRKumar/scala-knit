@@ -1,10 +1,19 @@
-package scalaknit.knit
+//> using file "Model.scala"
+package scalaknit.knit.main
 
 import scala.collection.immutable.Seq, scala.collection.immutable.List
 import scala.util.boundary, boundary.break
+import scalaknit.knit.model.{Stitch, Operation, State, WorkedRow, RowSide, Row}
 
-enum Stitch:
-  case Knit, Purl, CastOn, BindOff
+def renderState(state: State): String =
+  state.stitches.map {
+    renderStitch(_)
+  }.mkString
+
+def renderRow(row: Row): String = row.operations.map { renderOperation }.mkString(" ")
+
+def renderWorkedRow(workedRow: WorkedRow): String =
+  s"${renderState(workedRow.state)} (${workedRow.rowSide})"
 
 def renderStitch(stitch: Stitch): String = stitch match
   case Stitch.Knit => "X"
@@ -17,11 +26,6 @@ def flipStitch(stitch: Stitch): Stitch = stitch match
   case Stitch.Purl => Stitch.Knit
   case _ => stitch
 
-case class State(stitches: Seq[Stitch]):
-  override def toString: String =
-    stitches.map {
-      renderStitch(_)
-    }.mkString
 
 def countStitches(state: State): Int = 
   // count everything except bind offs
@@ -29,15 +33,6 @@ def countStitches(state: State): Int =
     case Stitch.BindOff => false
     case _ => true
   }
-
-enum Operation:
-  case Knit(numStitches: Int)
-  case KnitTwoTogether
-  case MakeOneLeft
-  case KnitFrontBack
-  case Purl(numStitches: Int)
-  case CastOn(numStitches: Int)
-  case BindOff(numStitches: Int)
 
 def consumes(op: Operation): Int = op match
   case Operation.Knit(numStitches) => numStitches
@@ -66,15 +61,11 @@ def renderOperation(op: Operation): String = op match
   case Operation.CastOn(numStitches) => s"Cast on $numStitches"
   case Operation.BindOff(numStitches) => s"Bind off $numStitches"
 
-enum RowSide:
-  case WS, RS
 
 def turn(side: RowSide): RowSide = side match
   case RowSide.WS => RowSide.RS
   case RowSide.RS => RowSide.WS
 
-case class Row(operations: Operation*):
-  override def toString: String = operations.map { renderOperation }.mkString(" ")
 
 def apply(row: Row, state: State): Either[Error, State] = 
   val totalConsumes = row.operations.map(consumes).sum
@@ -90,8 +81,6 @@ def apply(row: Row, state: State): Either[Error, State] =
 
     Right(State(sts))
 
-case class WorkedRow(state: State, rowSide: RowSide):
-  override def toString: String = s"${rowSide}: ${state.toString}"
   
 def renderWorkedRow(workedRow: WorkedRow, side: RowSide): String =
   val stitches = workedRow.state.stitches.map { stitch =>
@@ -106,7 +95,7 @@ def renderWorkedRows(workedRows: Seq[WorkedRow], side: RowSide): String =
 
 case class Pattern(rows: Row*):
   override def toString: String =
-    rows.map { row => row.toString }.mkString("\n")
+    rows.map { renderRow }.mkString("\n")
 
 def work(pattern: Pattern, startSide: RowSide): Either[Error, Seq[WorkedRow]] =
   val start = (State(List.empty), startSide, Right(Seq.empty[WorkedRow]): Either[Error, Seq[WorkedRow]])
@@ -137,6 +126,9 @@ def viewPattern(pattern: Pattern, side: RowSide): String =
     Row(Operation.Knit(4),Operation.KnitFrontBack),
     Row(Operation.BindOff(6)),
   )
+
+  println(stockinettePattern)
+
   println(viewPattern(stockinettePattern, RowSide.RS))
   println(viewPattern(stockinettePattern, RowSide.WS))
 
