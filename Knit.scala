@@ -35,13 +35,13 @@ def apply(row: Row, state: State): State =
   if totalConsumes != state.stitches.length then 
     throw new IllegalArgumentException(s"Row consumes $totalConsumes stitches, but current state has ${state.stitches.length} stitches.")
 
-  State(applyHelper(row.operations,state.stitches))
+  State(applyHelper(row.operations,state.stitches,Seq()))
 
-def applyHelper(operations: Seq[Operation], stitches: Seq[Stitch]): Seq[Stitch] = operations match
-  case Seq() => stitches
+def applyHelper(operations: Seq[Operation], remaining: Seq[Stitch], produced: Seq[Stitch]): Seq[Stitch] = operations match
+  case Seq() => produced
   case op :: rest =>
-      val newStitches = stitches.drop(op.consumes) ++ op.produces
-      applyHelper(rest, newStitches)
+      val newStitches = remaining.drop(op.consumes) 
+      applyHelper(rest, newStitches, produced ++ op.produces)
 
 class Pattern(rows: Seq[Row]):
   override def toString: String =
@@ -56,12 +56,9 @@ class Pattern(rows: Seq[Row]):
 
 @main def testPattern(): Unit =
   val pattern = Pattern(Seq(
-    Row(Seq(CastOn(10))),
-    Row(Seq(Knit(), Purl(), Knit(), Purl(), Knit(), Purl(), Knit(), Purl(), Knit(), Purl())),
-    Row(Seq(Purl(), Knit(), Purl(), Knit(), Purl(), Knit(), Purl(), Knit(), Purl(), Knit())),
-    Row(Seq(Knit(10))),
-    Row(Seq(Knit(8), KnitTwoTogether())),
-  ))
+    Row(Seq(CastOn(3))),
+    Row(Seq(KnitTwoTogether(),Knit())
+  )))
   
   println("Pattern:")
   println(pattern)
