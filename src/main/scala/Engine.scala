@@ -29,7 +29,7 @@ def produces(op: Operation): Seq[Stitch] = op match
   case Operation.CastOn(numStitches)  => List.fill(numStitches)(Stitch.CastOn)
   case Operation.BindOff(numStitches) => List.fill(numStitches)(Stitch.BindOff)
 
-def apply(row: Row, state: State): Either[Error, State] =
+def applyRow(row: Row, state: State): Either[Error, State] =
   val totalConsumes = row.operations.map(consumes).sum
   val stitchesInState = countStitches(state)
 
@@ -57,7 +57,7 @@ def work(pattern: Pattern, startSide: RowSide): Either[Error, Seq[WorkedRow]] =
   pattern.rows.foldLeft(start) { (inProgress, row) =>
     inProgress match
       case (currentState, currentSide, Right(output)) =>
-        apply(row, currentState) match
+        applyRow(row, currentState) match
           case Right(state) =>
             (
               state,
