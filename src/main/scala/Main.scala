@@ -2,10 +2,9 @@ package scalaknit.knit.main
 
 import scala.collection.immutable.Seq, scala.collection.immutable.List
 import scala.util.boundary, boundary.break
-import scalaknit.knit.model.{ Operation, RowSide, Row, Pattern}
+import scalaknit.knit.model.{Operation, RowSide, Row, Pattern}
 import scalaknit.knit.render.{renderWorkedRows, renderPattern}
 import scalaknit.knit.engine.{work}
-
 
 @main def examplePattern(): Unit =
   val stockinettePattern = Pattern(
@@ -14,21 +13,18 @@ import scalaknit.knit.engine.{work}
     Row(Operation.Purl(5)),
     Row(Operation.Knit(5)),
     Row(Operation.Purl(5)),
-    Row(Operation.Knit(4),Operation.KnitFrontBack),
-    Row(Operation.BindOff(6)),
+    Row(Operation.Knit(4), Operation.KnitFrontBack),
+    Row(Operation.BindOff(6))
   )
 
   println(renderPattern(stockinettePattern))
   println()
 
   work(stockinettePattern, RowSide.RS) match
-    case Right(workedRows) => 
+    case Right(workedRows) =>
       println("Right side:")
       println(renderWorkedRows(workedRows, RowSide.RS))
       println()
       println("Wrong side:")
       println(renderWorkedRows(workedRows, RowSide.WS))
     case Left(error) => println(s"Error: ${error}")
-
-
-
