@@ -48,7 +48,8 @@ def renderWorkedRow(workedRow: WorkedRow, side: RowSide): String =
     else flipStitch(stitch)
   }
 
-  stitches.map(renderStitch).mkString
+  val rendered = stitches.map(renderStitch).mkString
+  if workedRow.rowSide == side then rendered else rendered.reverse
 
 def renderWorkedRows(workedRows: Seq[WorkedRow], side: RowSide): String =
   workedRows
