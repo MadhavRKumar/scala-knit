@@ -29,17 +29,21 @@ class CastOn(numStitches: Int) extends Operation(0, Seq.fill(numStitches)(Stitch
 case class Row(operations: Seq[Operation]):
   override def toString: String = operations.map { op => op.toString }.mkString(" ")
 
-def apply(row: Row, state: State): State = 
+def apply(row: Row, state: State): Either[Error, State] = 
   val totalConsumes = row.operations.map(_.consumes).reduce(_+_)
 
   if totalConsumes != state.stitches.length then 
-    throw new IllegalArgumentException(s"Row consumes $totalConsumes stitches, but current state has ${state.stitches.length} stitches.")
+      Left(Error(s"Row consumes $totalConsumes stitches, but there are ${state.stitches.length} stitches in the current state"))
+  else
+    val (remaining, sts) = row.operations.foldLeft((state.stitches, Seq.empty[Stitch])) { (t, op) =>  
+      val (remaining, produced) = t
+      (remaining.drop(op.consumes), produced++op.produces) 
+    }
 
-  val (_, sts) = row.operations.foldLeft((state.stitches, Seq.empty[Stitch])) { (t, op) =>  
-    val (remaining, produced) = t
-    (remaining.drop(op.consumes), produced++op.produces) 
-  }
-  State(sts)
+    if remaining.length != 0 then
+      Left(Error(s"Row operations did not consume all stitches. Remaining stitches: ${remaining.length}"))
+    else
+      Right(State(sts))
 
 
 class Pattern(rows: Seq[Row]):
@@ -49,13 +53,17 @@ class Pattern(rows: Seq[Row]):
   def render(): Unit =
     var currentState = State(Seq.empty)
     for row <- rows do
-      currentState = apply(row, currentState)
-      println(currentState)
+      currentState = apply(row, currentState) match
+        case Right(state) => {
+          println(state)
+          state
+        }
+        case Left(error) => throw error
 
 
 @main def testPattern(): Unit =
   val pattern = Pattern(Seq(
-    Row(Seq(CastOn(3))),
+    Row(Seq(CastOn(2))),
     Row(Seq(KnitTwoTogether(),Knit())
   )))
   
