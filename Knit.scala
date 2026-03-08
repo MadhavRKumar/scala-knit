@@ -91,29 +91,25 @@ def renderWorkedRow(workedRow: WorkedRow, side: RowSide): String =
 def renderWorkedRows(workedRows: Seq[WorkedRow], side: RowSide): String =
   workedRows.map { workedRow => renderWorkedRow(workedRow, side) }.mkString("\n")
 
-class Pattern(rows: Row*):
+case class Pattern(rows: Row*):
   override def toString: String =
     rows.map { row => row.toString }.mkString("\n")
 
-  def work(startSide: RowSide): Either[Error, Seq[WorkedRow]] =
-    var currentSide = startSide
-    var currentState = State(List.empty) 
-    var output = Seq.empty[WorkedRow]
-    boundary {
-      for row <- rows do
-        currentState = apply(row, currentState) match
-          case Right(state) => {
-            output = output :+ WorkedRow(state, currentSide)
-            currentSide = turn(currentSide)
-            state
-          }
-          case Left(error) => break(Left(error))
-
-      Right(output)
-    }
+def work(pattern: Pattern, startSide: RowSide): Either[Error, Seq[WorkedRow]] =
+  val start = (State(List.empty), startSide, Right(Seq.empty[WorkedRow]): Either[Error, Seq[WorkedRow]])
+  pattern.rows.foldLeft (start) { (inProgress, row) =>
+    inProgress match
+       case (currentState, currentSide, Right(output)) =>
+         apply(row, currentState) match
+           case Right(state) => (state, turn(currentSide), Right(output :+ WorkedRow(state, currentSide)))
+           case Left(error) => (currentState, currentSide, Left(error))
+       case (_, _, Left(error)) => (State(List.empty), startSide, Left(error))
+  } match
+    case (_, _, Right(workedRows)) => Right(workedRows)
+    case (_, _, Left(error)) => Left(error)
 
 def viewPattern(pattern: Pattern, side: RowSide): String =
-  pattern.work(RowSide.RS) match
+  work(pattern, RowSide.RS) match
     case Right(workedRows) => renderWorkedRows(workedRows, side)
     case Left(error) => s"Error: ${error}"
 
