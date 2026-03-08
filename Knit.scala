@@ -63,7 +63,7 @@ class Pattern(rows: Seq[Row]):
 
 @main def testPattern(): Unit =
   val pattern = Pattern(Seq(
-    Row(Seq(CastOn(2))),
+    Row(Seq(CastOn(3))),
     Row(Seq(KnitTwoTogether(),Knit())
   )))
   
