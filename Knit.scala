@@ -24,6 +24,9 @@ class KnitTwoTogether extends Operation(2, Seq(Stitch.Knit)):
 class MakeOneLeft extends Operation(0, Seq(Stitch.Knit)):
   override def toString: String = s"m1l"
 
+class KnitFrontBack extends Operation(1, Seq.fill(2)(Stitch.Knit)):
+  override def toString: String = s"kfb"
+
 class Purl(numStitches: Int = 1) extends Operation(numStitches, Seq.fill(numStitches)(Stitch.Purl)):
   override def toString: String = s"p$numStitches"
 
@@ -74,7 +77,8 @@ class Pattern(rows: Row*):
   val pattern = Pattern(
     Row(CastOn(3)),
     Row(KnitTwoTogether(), Knit()),
-    Row(MakeOneLeft(), Knit(), Knit(), MakeOneLeft())
+    Row(MakeOneLeft(), Knit(), Knit(), MakeOneLeft()),
+    Row(KnitFrontBack(),Knit(3))
   )
   
   println("Pattern:")
