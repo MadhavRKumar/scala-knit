@@ -1,6 +1,3 @@
-//> using file "Model.scala"
-//> using file "Engine.scala"
-//> using file "Render.scala"
 package scalaknit.knit.main
 
 import scala.collection.immutable.Seq, scala.collection.immutable.List
@@ -10,7 +7,7 @@ import scalaknit.knit.render.{renderWorkedRows, renderPattern}
 import scalaknit.knit.engine.{work}
 
 
-@main def testPattern(): Unit =
+@main def examplePattern(): Unit =
   val stockinettePattern = Pattern(
     Row(Operation.CastOn(5)),
     Row(Operation.Knit(5)),
