@@ -2,7 +2,6 @@ package scalaknit.knit.render
 
 import scala.collection.immutable.Seq, scala.collection.immutable.List
 import scalaknit.knit.model.{Stitch, Operation, State, WorkedRow, RowSide, Row, Pattern}
-import scalaknit.knit.engine.{work}
 
 def renderState(state: State): String =
   state.stitches.map {
@@ -47,9 +46,3 @@ def renderWorkedRows(workedRows: Seq[WorkedRow], side: RowSide): String =
 
 def renderPattern(pattern: Pattern): String =
   pattern.rows.map { row => renderRow(row) }.mkString("\n")
-
-def viewPattern(pattern: Pattern, side: RowSide): String =
-  work(pattern, RowSide.RS) match
-    case Right(workedRows) => renderWorkedRows(workedRows, side)
-    case Left(error) => s"Error: ${error}"
-
