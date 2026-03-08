@@ -30,28 +30,41 @@ def countStitches(state: State): Int =
     case _ => true
   }
 
-case class Operation(consumes:Int, produces:Seq[Stitch])
+enum Operation:
+  case Knit(numStitches: Int)
+  case KnitTwoTogether
+  case MakeOneLeft
+  case KnitFrontBack
+  case Purl(numStitches: Int)
+  case CastOn(numStitches: Int)
+  case BindOff(numStitches: Int)
 
-class Knit(numStitches: Int = 1) extends Operation(numStitches, List.fill(numStitches)(Stitch.Knit) ):
-  override def toString: String = s"k$numStitches"
+def consumes(op: Operation): Int = op match
+  case Operation.Knit(numStitches) => numStitches
+  case Operation.KnitTwoTogether => 2
+  case Operation.MakeOneLeft => 0
+  case Operation.KnitFrontBack => 1
+  case Operation.Purl(numStitches) => numStitches
+  case Operation.CastOn(numStitches) => 0
+  case Operation.BindOff(numStitches) => numStitches
 
-class KnitTwoTogether extends Operation(2, List(Stitch.Knit)):
-  override def toString: String = s"k2tog"
+def produces(op: Operation): Seq[Stitch] = op match
+  case Operation.Knit(numStitches) => List.fill(numStitches)(Stitch.Knit)
+  case Operation.KnitTwoTogether => List(Stitch.Knit)
+  case Operation.MakeOneLeft => List(Stitch.Knit)
+  case Operation.KnitFrontBack => List.fill(2)(Stitch.Knit)
+  case Operation.Purl(numStitches) => List.fill(numStitches)(Stitch.Purl)
+  case Operation.CastOn(numStitches) => List.fill(numStitches)(Stitch.CastOn)
+  case Operation.BindOff(numStitches) => List.fill(numStitches)(Stitch.BindOff)
 
-class MakeOneLeft extends Operation(0, List(Stitch.Knit)):
-  override def toString: String = s"m1l"
-
-class KnitFrontBack extends Operation(1, List.fill(2)(Stitch.Knit)):
-  override def toString: String = s"kfb"
-
-class Purl(numStitches: Int = 1) extends Operation(numStitches, List.fill(numStitches)(Stitch.Purl)):
-  override def toString: String = s"p$numStitches"
-
-class CastOn(numStitches: Int) extends Operation(0, List.fill(numStitches)(Stitch.CastOn) ):
-  override def toString: String = s"Cast on $numStitches"
-
-class BindOff(numStitches: Int) extends Operation(numStitches, List.fill(numStitches)(Stitch.BindOff) ):
-  override def toString: String = s"Bind off $numStitches"
+def renderOperation(op: Operation): String = op match
+  case Operation.Knit(numStitches) => s"k$numStitches"
+  case Operation.KnitTwoTogether => s"k2tog"
+  case Operation.MakeOneLeft => s"m1l"
+  case Operation.KnitFrontBack => s"kfb"
+  case Operation.Purl(numStitches) => s"p$numStitches"
+  case Operation.CastOn(numStitches) => s"Cast on $numStitches"
+  case Operation.BindOff(numStitches) => s"Bind off $numStitches"
 
 enum RowSide:
   case WS, RS
@@ -61,10 +74,10 @@ def turn(side: RowSide): RowSide = side match
   case RowSide.RS => RowSide.WS
 
 case class Row(operations: Operation*):
-  override def toString: String = operations.map { op => op.toString }.mkString(" ")
+  override def toString: String = operations.map { renderOperation }.mkString(" ")
 
 def apply(row: Row, state: State): Either[Error, State] = 
-  val totalConsumes = row.operations.map(_.consumes).reduce(_+_)
+  val totalConsumes = row.operations.map(consumes).sum
   val stitchesInState = countStitches(state)
 
   if totalConsumes != stitchesInState then 
@@ -72,7 +85,7 @@ def apply(row: Row, state: State): Either[Error, State] =
   else
     val (_, sts) = row.operations.foldLeft((state.stitches, List.empty[Stitch])) { (t, op) =>  
       val (remaining, produced) = t
-      (remaining.drop(op.consumes), produced++op.produces) 
+      (remaining.drop(consumes(op)), produced++produces(op)) 
     }
 
     Right(State(sts))
@@ -116,13 +129,13 @@ def viewPattern(pattern: Pattern, side: RowSide): String =
 
 @main def testPattern(): Unit =
   val stockinettePattern = Pattern(
-    Row(CastOn(5)),
-    Row(Knit(5)),
-    Row(Purl(5)),
-    Row(Knit(5)),
-    Row(Purl(5)),
-    Row(Knit(4),KnitFrontBack()),
-    Row(BindOff(6)),
+    Row(Operation.CastOn(5)),
+    Row(Operation.Knit(5)),
+    Row(Operation.Purl(5)),
+    Row(Operation.Knit(5)),
+    Row(Operation.Purl(5)),
+    Row(Operation.Knit(4),Operation.KnitFrontBack),
+    Row(Operation.BindOff(6)),
   )
   println(viewPattern(stockinettePattern, RowSide.RS))
   println(viewPattern(stockinettePattern, RowSide.WS))
