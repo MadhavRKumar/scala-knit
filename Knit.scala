@@ -1,6 +1,7 @@
 package scalaknit.knit
 
 import scala.collection.immutable.Seq
+import scala.util.boundary, boundary.break
 
 enum Stitch:
   case Knit, Purl
@@ -53,21 +54,26 @@ class Pattern(rows: Row*):
   override def toString: String =
     rows.map { row => row.toString }.mkString("\n")
 
-  def render(): Unit =
+  def render(): Either[Error, String] =
     var currentState = State() 
-    for row <- rows do
-      currentState = apply(row, currentState) match
-        case Right(state) => {
-          println(state)
-          state
-        }
-        case Left(error) => throw error
+    var output = ""
+    boundary {
+      for row <- rows do
+        currentState = apply(row, currentState) match
+          case Right(state) => {
+            output += state.toString + "\n"
+            state
+          }
+          case Left(error) => break(Left(error))
+
+      Right(output)
+    }
 
 
 @main def testPattern(): Unit =
   val pattern = Pattern(
     Row(CastOn(3)),
-    Row(KnitTwoTogether(),Knit()),
+    Row(KnitTwoTogether(), Knit()),
     Row(MakeOneLeft(), Knit(), Knit(), MakeOneLeft())
   )
   
@@ -76,5 +82,8 @@ class Pattern(rows: Row*):
 
   println()
   println("Output:")
-  pattern.render()
+  val output = pattern.render() match
+    case Right(result) => result
+    case Left(error) => s"Error: ${error}"
+  println(output)
 
