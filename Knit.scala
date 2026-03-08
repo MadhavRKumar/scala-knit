@@ -4,23 +4,31 @@ import scala.collection.immutable.Seq, scala.collection.immutable.List
 import scala.util.boundary, boundary.break
 
 enum Stitch:
-  case Knit, Purl, CastOn
+  case Knit, Purl, CastOn, BindOff
 
 def renderStitch(stitch: Stitch): String = stitch match
   case Stitch.Knit => "X"
   case Stitch.Purl => "O"
   case Stitch.CastOn => "_"
+  case Stitch.BindOff => "&"
 
 def flipStitch(stitch: Stitch): Stitch = stitch match
   case Stitch.Knit => Stitch.Purl
   case Stitch.Purl => Stitch.Knit
-  case Stitch.CastOn => Stitch.CastOn
+  case _ => stitch
 
 case class State(stitches: Seq[Stitch]):
   override def toString: String =
     stitches.map {
       renderStitch(_)
     }.mkString
+
+def countStitches(state: State): Int = 
+  // count everything except bind offs
+  state.stitches.count {
+    case Stitch.BindOff => false
+    case _ => true
+  }
 
 case class Operation(consumes:Int, produces:Seq[Stitch])
 
@@ -42,6 +50,9 @@ class Purl(numStitches: Int = 1) extends Operation(numStitches, List.fill(numSti
 class CastOn(numStitches: Int) extends Operation(0, List.fill(numStitches)(Stitch.CastOn) ):
   override def toString: String = s"Cast on $numStitches"
 
+class BindOff(numStitches: Int) extends Operation(numStitches, List.fill(numStitches)(Stitch.BindOff) ):
+  override def toString: String = s"Bind off $numStitches"
+
 enum RowSide:
   case WS, RS
 
@@ -54,19 +65,17 @@ case class Row(operations: Operation*):
 
 def apply(row: Row, state: State): Either[Error, State] = 
   val totalConsumes = row.operations.map(_.consumes).reduce(_+_)
+  val stitchesInState = countStitches(state)
 
-  if totalConsumes != state.stitches.length then 
-      Left(Error(s"Row consumes $totalConsumes stitches, but there are ${state.stitches.length} stitches in the current state"))
+  if totalConsumes != stitchesInState then 
+      Left(Error(s"Row consumes $totalConsumes stitches, but there are ${stitchesInState}"))
   else
-    val (remaining, sts) = row.operations.foldLeft((state.stitches, List.empty[Stitch])) { (t, op) =>  
+    val (_, sts) = row.operations.foldLeft((state.stitches, List.empty[Stitch])) { (t, op) =>  
       val (remaining, produced) = t
       (remaining.drop(op.consumes), produced++op.produces) 
     }
 
-    if remaining.length != 0 then
-      Left(Error(s"Row operations did not consume all stitches. Remaining stitches: ${remaining.length}"))
-    else
-      Right(State(sts))
+    Right(State(sts))
 
 case class WorkedRow(state: State, rowSide: RowSide):
   override def toString: String = s"${rowSide}: ${state.toString}"
@@ -110,21 +119,15 @@ def viewPattern(pattern: Pattern, side: RowSide): String =
 
 
 @main def testPattern(): Unit =
-  val pattern = Pattern(
-    Row(CastOn(3)),
-    Row(KnitTwoTogether(), Knit()),
-    Row(MakeOneLeft(), Knit(), Knit(), MakeOneLeft()),
-    Row(KnitFrontBack(),Purl(),Knit(2))
-  )
-  
   val stockinettePattern = Pattern(
     Row(CastOn(5)),
     Row(Knit(5)),
     Row(Purl(5)),
     Row(Knit(5)),
-    Row(Purl(5))
+    Row(Purl(5)),
+    Row(Knit(4),KnitFrontBack()),
+    Row(BindOff(6)),
   )
   println(viewPattern(stockinettePattern, RowSide.RS))
-  println()
   println(viewPattern(stockinettePattern, RowSide.WS))
 
