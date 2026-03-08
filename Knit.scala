@@ -35,13 +35,12 @@ def apply(row: Row, state: State): State =
   if totalConsumes != state.stitches.length then 
     throw new IllegalArgumentException(s"Row consumes $totalConsumes stitches, but current state has ${state.stitches.length} stitches.")
 
-  State(applyHelper(row.operations,state.stitches,Seq()))
+  val (_, sts) = row.operations.foldLeft((state.stitches, Seq.empty[Stitch])) { (t, op) =>  
+    val (remaining, produced) = t
+    (remaining.drop(op.consumes), produced++op.produces) 
+  }
+  State(sts)
 
-def applyHelper(operations: Seq[Operation], remaining: Seq[Stitch], produced: Seq[Stitch]): Seq[Stitch] = operations match
-  case Seq() => produced
-  case op :: rest =>
-      val newStitches = remaining.drop(op.consumes) 
-      applyHelper(rest, newStitches, produced ++ op.produces)
 
 class Pattern(rows: Seq[Row]):
   override def toString: String =
