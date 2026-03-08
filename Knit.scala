@@ -1,37 +1,46 @@
 package scalaknit.knit
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.Seq, scala.collection.immutable.List
 import scala.util.boundary, boundary.break
 
 enum Stitch:
   case Knit, Purl
 
-case class State(stitches: Stitch*):
+case class State(stitches: Seq[Stitch], rowSide: RowSide = RowSide.RS):
   override def toString: String =
-    stitches.map {
-      case Stitch.Knit => "X"
-      case Stitch.Purl => "O"
-    }.mkString
+    rowSide match
+      case RowSide.RS => stitches.map {
+        case Stitch.Knit => "X"
+        case Stitch.Purl => "O"
+      }.mkString("")
+      case RowSide.WS => stitches.map {
+        case Stitch.Knit => "O"
+        case Stitch.Purl => "X"
+      }.mkString("")
+
 
 case class Operation(consumes:Int, produces:Seq[Stitch])
 
-class Knit(numStitches: Int = 1) extends Operation(numStitches, Seq.fill(numStitches)(Stitch.Knit) ):
+class Knit(numStitches: Int = 1) extends Operation(numStitches, List.fill(numStitches)(Stitch.Knit) ):
   override def toString: String = s"k$numStitches"
 
-class KnitTwoTogether extends Operation(2, Seq(Stitch.Knit)):
+class KnitTwoTogether extends Operation(2, List(Stitch.Knit)):
   override def toString: String = s"k2tog"
 
-class MakeOneLeft extends Operation(0, Seq(Stitch.Knit)):
+class MakeOneLeft extends Operation(0, List(Stitch.Knit)):
   override def toString: String = s"m1l"
 
-class KnitFrontBack extends Operation(1, Seq.fill(2)(Stitch.Knit)):
+class KnitFrontBack extends Operation(1, List.fill(2)(Stitch.Knit)):
   override def toString: String = s"kfb"
 
-class Purl(numStitches: Int = 1) extends Operation(numStitches, Seq.fill(numStitches)(Stitch.Purl)):
+class Purl(numStitches: Int = 1) extends Operation(numStitches, List.fill(numStitches)(Stitch.Purl)):
   override def toString: String = s"p$numStitches"
 
-class CastOn(numStitches: Int) extends Operation(0, Seq.fill(numStitches)(Stitch.Knit) ):
+class CastOn(numStitches: Int) extends Operation(0, List.fill(numStitches)(Stitch.Knit) ):
   override def toString: String = s"Cast on $numStitches"
+
+enum RowSide:
+  case WS, RS
 
 case class Row(operations: Operation*):
   override def toString: String = operations.map { op => op.toString }.mkString(" ")
@@ -42,7 +51,7 @@ def apply(row: Row, state: State): Either[Error, State] =
   if totalConsumes != state.stitches.length then 
       Left(Error(s"Row consumes $totalConsumes stitches, but there are ${state.stitches.length} stitches in the current state"))
   else
-    val (remaining, sts) = row.operations.foldLeft((state.stitches, Seq.empty[Stitch])) { (t, op) =>  
+    val (remaining, sts) = row.operations.foldLeft((state.stitches, List.empty[Stitch])) { (t, op) =>  
       val (remaining, produced) = t
       (remaining.drop(op.consumes), produced++op.produces) 
     }
@@ -50,22 +59,31 @@ def apply(row: Row, state: State): Either[Error, State] =
     if remaining.length != 0 then
       Left(Error(s"Row operations did not consume all stitches. Remaining stitches: ${remaining.length}"))
     else
-      Right(State(sts*))
+      Right(State(sts, state.rowSide))
 
+def turn(state: State): State =
+  state.rowSide match
+    case RowSide.RS => state.copy(rowSide = RowSide.WS)
+    case RowSide.WS => state.copy(rowSide = RowSide.RS)
+
+def turn(side: RowSide): RowSide =
+  side match
+    case RowSide.RS => RowSide.WS
+    case RowSide.WS => RowSide.RS
 
 class Pattern(rows: Row*):
   override def toString: String =
     rows.map { row => row.toString }.mkString("\n")
 
-  def render(): Either[Error, String] =
-    var currentState = State() 
+  def render(side: RowSide): Either[Error, String] =
+    var currentState = State(List.empty, side) 
     var output = ""
     boundary {
       for row <- rows do
         currentState = apply(row, currentState) match
           case Right(state) => {
             output += state.toString + "\n"
-            state
+            turn(state)
           }
           case Left(error) => break(Left(error))
 
@@ -78,7 +96,7 @@ class Pattern(rows: Row*):
     Row(CastOn(3)),
     Row(KnitTwoTogether(), Knit()),
     Row(MakeOneLeft(), Knit(), Knit(), MakeOneLeft()),
-    Row(KnitFrontBack(),Knit(3))
+    Row(KnitFrontBack(),Purl(),Knit(2))
   )
   
   println("Pattern:")
@@ -86,7 +104,7 @@ class Pattern(rows: Row*):
 
   println()
   println("Output:")
-  val output = pattern.render() match
+  val output = pattern.render(RowSide.RS) match
     case Right(result) => result
     case Left(error) => s"Error: ${error}"
   println(output)
