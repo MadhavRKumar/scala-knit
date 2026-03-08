@@ -66,11 +66,6 @@ def turn(state: State): State =
     case RowSide.RS => state.copy(rowSide = RowSide.WS)
     case RowSide.WS => state.copy(rowSide = RowSide.RS)
 
-def turn(side: RowSide): RowSide =
-  side match
-    case RowSide.RS => RowSide.WS
-    case RowSide.WS => RowSide.RS
-
 class Pattern(rows: Row*):
   override def toString: String =
     rows.map { row => row.toString }.mkString("\n")
