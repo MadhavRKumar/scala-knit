@@ -20,6 +20,9 @@ class Knit(numStitches: Int = 1) extends Operation(numStitches, Seq.fill(numStit
 class KnitTwoTogether extends Operation(2, Seq(Stitch.Knit)):
   override def toString: String = s"k2tog"
 
+class MakeOneLeft extends Operation(0, Seq(Stitch.Knit)):
+  override def toString: String = s"m1l"
+
 class Purl(numStitches: Int = 1) extends Operation(numStitches, Seq.fill(numStitches)(Stitch.Purl)):
   override def toString: String = s"p$numStitches"
 
@@ -64,8 +67,9 @@ class Pattern(rows: Seq[Row]):
 @main def testPattern(): Unit =
   val pattern = Pattern(Seq(
     Row(Seq(CastOn(3))),
-    Row(Seq(KnitTwoTogether(),Knit())
-  )))
+    Row(Seq(KnitTwoTogether(),Knit())),
+    Row(Seq(MakeOneLeft(), Knit(), Knit()))
+  ))
   
   println("Pattern:")
   println(pattern)
