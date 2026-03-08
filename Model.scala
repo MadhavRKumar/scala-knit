@@ -20,3 +20,5 @@ enum RowSide:
   case WS, RS
 
 case class Row(operations: Operation*)
+
+case class Pattern(rows: Row*)

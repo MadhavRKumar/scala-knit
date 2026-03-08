@@ -1,9 +1,11 @@
 //> using file "Model.scala"
+//> using file "Engine.scala"
 package scalaknit.knit.main
 
 import scala.collection.immutable.Seq, scala.collection.immutable.List
 import scala.util.boundary, boundary.break
-import scalaknit.knit.model.{Stitch, Operation, State, WorkedRow, RowSide, Row}
+import scalaknit.knit.model.{Stitch, Operation, State, WorkedRow, RowSide, Row, Pattern}
+import scalaknit.knit.engine.{consumes, produces, apply, work}
 
 def renderState(state: State): String =
   state.stitches.map {
@@ -27,30 +29,6 @@ def flipStitch(stitch: Stitch): Stitch = stitch match
   case _ => stitch
 
 
-def countStitches(state: State): Int = 
-  // count everything except bind offs
-  state.stitches.count {
-    case Stitch.BindOff => false
-    case _ => true
-  }
-
-def consumes(op: Operation): Int = op match
-  case Operation.Knit(numStitches) => numStitches
-  case Operation.KnitTwoTogether => 2
-  case Operation.MakeOneLeft => 0
-  case Operation.KnitFrontBack => 1
-  case Operation.Purl(numStitches) => numStitches
-  case Operation.CastOn(numStitches) => 0
-  case Operation.BindOff(numStitches) => numStitches
-
-def produces(op: Operation): Seq[Stitch] = op match
-  case Operation.Knit(numStitches) => List.fill(numStitches)(Stitch.Knit)
-  case Operation.KnitTwoTogether => List(Stitch.Knit)
-  case Operation.MakeOneLeft => List(Stitch.Knit)
-  case Operation.KnitFrontBack => List.fill(2)(Stitch.Knit)
-  case Operation.Purl(numStitches) => List.fill(numStitches)(Stitch.Purl)
-  case Operation.CastOn(numStitches) => List.fill(numStitches)(Stitch.CastOn)
-  case Operation.BindOff(numStitches) => List.fill(numStitches)(Stitch.BindOff)
 
 def renderOperation(op: Operation): String = op match
   case Operation.Knit(numStitches) => s"k$numStitches"
@@ -62,26 +40,7 @@ def renderOperation(op: Operation): String = op match
   case Operation.BindOff(numStitches) => s"Bind off $numStitches"
 
 
-def turn(side: RowSide): RowSide = side match
-  case RowSide.WS => RowSide.RS
-  case RowSide.RS => RowSide.WS
 
-
-def apply(row: Row, state: State): Either[Error, State] = 
-  val totalConsumes = row.operations.map(consumes).sum
-  val stitchesInState = countStitches(state)
-
-  if totalConsumes != stitchesInState then 
-      Left(Error(s"Row consumes $totalConsumes stitches, but there are ${stitchesInState}"))
-  else
-    val (_, sts) = row.operations.foldLeft((state.stitches, List.empty[Stitch])) { (t, op) =>  
-      val (remaining, produced) = t
-      (remaining.drop(consumes(op)), produced++produces(op)) 
-    }
-
-    Right(State(sts))
-
-  
 def renderWorkedRow(workedRow: WorkedRow, side: RowSide): String =
   val stitches = workedRow.state.stitches.map { stitch =>
     if workedRow.rowSide == side then stitch
@@ -93,22 +52,8 @@ def renderWorkedRow(workedRow: WorkedRow, side: RowSide): String =
 def renderWorkedRows(workedRows: Seq[WorkedRow], side: RowSide): String =
   workedRows.map { workedRow => renderWorkedRow(workedRow, side) }.mkString("\n")
 
-case class Pattern(rows: Row*):
-  override def toString: String =
-    rows.map { renderRow }.mkString("\n")
-
-def work(pattern: Pattern, startSide: RowSide): Either[Error, Seq[WorkedRow]] =
-  val start = (State(List.empty), startSide, Right(Seq.empty[WorkedRow]): Either[Error, Seq[WorkedRow]])
-  pattern.rows.foldLeft (start) { (inProgress, row) =>
-    inProgress match
-       case (currentState, currentSide, Right(output)) =>
-         apply(row, currentState) match
-           case Right(state) => (state, turn(currentSide), Right(output :+ WorkedRow(state, currentSide)))
-           case Left(error) => (currentState, currentSide, Left(error))
-       case (_, _, Left(error)) => (State(List.empty), startSide, Left(error))
-  } match
-    case (_, _, Right(workedRows)) => Right(workedRows)
-    case (_, _, Left(error)) => Left(error)
+def renderPattern(pattern: Pattern): String =
+  pattern.rows.map { row => renderRow(row) }.mkString("\n")
 
 def viewPattern(pattern: Pattern, side: RowSide): String =
   work(pattern, RowSide.RS) match
@@ -127,7 +72,7 @@ def viewPattern(pattern: Pattern, side: RowSide): String =
     Row(Operation.BindOff(6)),
   )
 
-  println(stockinettePattern)
+  println(renderPattern(stockinettePattern))
 
   println(viewPattern(stockinettePattern, RowSide.RS))
   println(viewPattern(stockinettePattern, RowSide.WS))
