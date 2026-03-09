@@ -1,7 +1,5 @@
 package scalaknit.knit.main
 
-import scala.collection.immutable.Seq, scala.collection.immutable.List
-import scala.util.boundary, boundary.break
 import scalaknit.knit.model.{Operation, RowSide, Row, Pattern}
 import scalaknit.knit.render.{renderWorkedRows, renderPattern}
 import scalaknit.knit.engine.{work}
