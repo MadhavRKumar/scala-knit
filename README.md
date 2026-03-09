@@ -1,4 +1,4 @@
-scala-knit
+scala-knit [![CI](https://github.com/MadhavRKumar/scala-knit/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/MadhavRKumar/scala-knit/actions/workflows/ci.yml)
 =========
 
 scala-knit is a library that models knitting in Scala. It allows you to create a
