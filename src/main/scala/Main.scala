@@ -16,6 +16,15 @@ import scalaknit.knit.engine.{work}
   )
 
   println(renderPattern(stockinettePattern))
+  /*
+      Cast on 5
+      k5
+      p5
+      k5
+      p5
+      k4 kfb
+      Bind off 6
+   */
   println()
 
   work(stockinettePattern, RowSide.RS) match
@@ -26,3 +35,22 @@ import scalaknit.knit.engine.{work}
       println("Wrong side:")
       println(renderWorkedRows(workedRows, RowSide.WS))
     case Left(error) => println(s"Error: ${error}")
+    /*
+      Right side:
+      _____
+      OOOOO
+      OOOOO
+      OOOOO
+      OOOOO
+      OOOOOO
+      &&&&&&
+
+      Wrong side:
+      _____
+      XXXXX
+      XXXXX
+      XXXXX
+      XXXXX
+      XXXXXX
+      &&&&&&
+     */
